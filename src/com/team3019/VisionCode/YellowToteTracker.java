@@ -1,18 +1,16 @@
 package com.team3019.VisionCode;
 
-//import java.awt.image.BufferedImage;
-//import java.io.File;
+import java.awt.image.BufferedImage;
+import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.SocketException;
-//import java.net.URL;
-//import java.net.URLConnection;
+import java.net.URL;
+import java.net.URLConnection;
 import java.util.ArrayList;
 import java.util.Iterator;
-
-//import javax.imageio.ImageIO;
-
+import javax.imageio.ImageIO;
 import org.apache.commons.net.ftp.FTPClient;
 import org.opencv.core.Core;
 import org.opencv.core.Mat;
@@ -22,6 +20,9 @@ import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.highgui.Highgui;
 import org.opencv.imgproc.Imgproc;
+
+import com.ni.vision.NIVision;
+import com.ni.vision.NIVision.Image;
 
 import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
@@ -34,31 +35,31 @@ import edu.wpi.first.wpilibj.networktables.NetworkTable;
 
 
 public class YellowToteTracker{
-	
-	static FTPClient ftp;
-	
+
+//	static FTPClient ftp;
+
 	static NetworkTable table;
 	static Thread Capture;
 	static Thread Process;
 	static Thread Send;
 	// Color constants
 	public static final Scalar 
-		Red = new Scalar(0, 0, 255),
-		Blue = new Scalar(255, 0, 0),
-		Green = new Scalar(0, 255, 0),
-		Yellow = new Scalar(0, 255, 255),
-		// For tape
-		thresh_Lower = new Scalar(0,110,0),
-		thresh_Higher = new Scalar(255,255,134),
-		// For grey totes
-		grey_Lower = new Scalar(48,60,35),
-		grey_higher = new Scalar(81,84,54);
-	
+	Red = new Scalar(0, 0, 255),
+	Blue = new Scalar(255, 0, 0),
+	Green = new Scalar(0, 255, 0),
+	Yellow = new Scalar(0, 255, 255),
+	// For tape
+	thresh_Lower = new Scalar(0,110,0),
+	thresh_Higher = new Scalar(255,255,134),
+	// For grey totes
+	grey_Lower = new Scalar(48,60,35),
+	grey_higher = new Scalar(81,84,54);
+
 	static final boolean Process_Gray = false;
 	public static ArrayList<MatOfPoint> contours = new ArrayList<>();
 	public static Mat frame,grey,original;
 	static int counter = 0;
-	
+
 	public static void main(String[] args) {
 		// Required for openCV to work -called before any functions of oCV are used
 		System.loadLibrary(Core.NATIVE_LIBRARY_NAME);
@@ -67,28 +68,25 @@ public class YellowToteTracker{
 		// The IP of the SmartDashboard is "roborio-####.local" where #### is the team number
 		NetworkTable.setIPAddress("roborio-3946.local");
 		table = NetworkTable.getTable("SmartDashboard");
-		
-		ftp = new FTPClient();
-		try {
-			ftp.connect("roborio-3946.local");
-		} catch (SocketException e) {
-			// TODO Auto-generated catch block
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
+
+//		ftp = new FTPClient();
+
+//		connect();
+
 		// Main loop of the program
 		while(true){
 			try {
 				while(table.isConnected()){
 					processImage();
 				}
+				//out of loop
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 				break;
 			}
+			// out side try
+//			connect();
 		}
 	}
 	// Opens a new connection to the Axis/USB camera and opens a new snapshot "instance".
@@ -96,27 +94,29 @@ public class YellowToteTracker{
 		try {
 			// The url of the camera snapshot to save ##.## with your team number
 			// URL url = new URL("http://10.##.##.11/axis-cgi/jpg/image.cgi");			
-			
+
 			// Comment if testing a regular file
-			//URL url = new URL("http://10.30.19.11/axis-cgi/jpg/image.cgi");
-			//URLConnection uc = url.openConnection();
-			//BufferedImage image = ImageIO.read(us.getInputStream());
 			
-			FileOutputStream fstream = null;
-			try {
-				fstream = new FileOutputStream("frame.jpg");
-			} catch (FileNotFoundException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			} // true tells to append data
+//			FileOutputStream fstream = null;
+//			try {
+//				fstream = new FileOutputStream("frame.jpg");
+//			} catch (FileNotFoundException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			} // true tells to append data
+//
+//			try {
+//				ftp.retrieveFile("/home/lvuser/frame.jpg", fstream);
+//			} catch (IOException e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//			fstream.close();
 			
-			try {
-				ftp.retrieveFile("/home/lvuser/frame.jpg", fstream);
-			} catch (IOException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			fstream.close();
+			URL url = new URL("ftp://roborio-3946.local/home/lvuser/frame.jpg");
+			URLConnection uc = url.openConnection();
+			BufferedImage image = ImageIO.read(uc.getInputStream());
+			ImageIO.write(image, "jpg", new File("frame.jpg"));
 			// Time for the OpenCV fun!
 			// frame = new Mat();
 			grey = new Mat();
@@ -136,21 +136,21 @@ public class YellowToteTracker{
 			}
 			// If there's only one contour, skip the process of bounding rectangles.
 			if(contours.size() == 1){
-					Rect rec1 = Imgproc.boundingRect(contours.get(0));
-					Core.rectangle(original, rec1.tl(), rec1.br(), Yellow);
-					String string = "TargetFound at X:" + (rec1.tl().x + rec1.br().x) / 2 + "Y:" + (rec1.tl().y + rec1.br().y) / 2;
-					Core.putText(original, string, new Point(200,frame.size().height-10), Core.FONT_HERSHEY_PLAIN, 1, Red);
+				Rect rec1 = Imgproc.boundingRect(contours.get(0));
+				Core.rectangle(original, rec1.tl(), rec1.br(), Yellow);
+				String string = "TargetFound at X:" + (rec1.tl().x + rec1.br().x) / 2 + "Y:" + (rec1.tl().y + rec1.br().y) / 2;
+				Core.putText(original, string, new Point(200,frame.size().height-10), Core.FONT_HERSHEY_PLAIN, 1, Red);
 			}
 			// I wonder if there are two...
 			else if(contours.size() == 2 || contours.size() == 4){
 				ArrayList<Rect> target1 = new ArrayList<Rect>();
 				ArrayList<Rect> target2 = new ArrayList<Rect>();
-					target1.add(Imgproc.boundingRect(contours.get(0)));
-					target1.add(Imgproc.boundingRect(contours.get(1)));
-					if(contours.size() == 4){
-						target2.add(Imgproc.boundingRect(contours.get(2)));
-						target2.add(Imgproc.boundingRect(contours.get(3)));
-					}
+				target1.add(Imgproc.boundingRect(contours.get(0)));
+				target1.add(Imgproc.boundingRect(contours.get(1)));
+				if(contours.size() == 4){
+					target2.add(Imgproc.boundingRect(contours.get(2)));
+					target2.add(Imgproc.boundingRect(contours.get(3)));
+				}
 				Point tl = target1.get(0).tl();
 				Point br = target1.get(0).br();
 				// Perimeter of first rectangle
@@ -204,7 +204,7 @@ public class YellowToteTracker{
 								new Point(bb2.x+bb2.width/2,bb2.y+bb2.height/2), Green);
 					}
 					else{
-					string = "Two totes found.";
+						string = "Two totes found.";
 					}
 				}
 				else{
@@ -226,7 +226,7 @@ public class YellowToteTracker{
 				}
 				for(int i = 1; i < contours.size();i++){
 					if(Math.abs(rect.get(i).y - rect.get(i-1).y) < 5){
-						
+
 						Rect r1 = rect.get(i);
 						Rect r2 = rect.get(i-1);
 						Point tl = r1.tl();
@@ -286,10 +286,28 @@ public class YellowToteTracker{
 			original.release();
 			grey.release();
 			frame.release();
-		// Mostly for debugging but errors happen
+			// Mostly for debugging but errors happen
 		} catch (Exception e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();	
 		}
 	}
+//	public static void connect(){
+//		while(!ftp.isConnected()){
+//			try {
+//				ftp.connect("roborio-3946.local");
+//			} catch (SocketException e) {
+//				// TODO Auto-generated catch block
+//			} catch (Exception e) {
+//				// TODO Auto-generated catch block
+//				e.printStackTrace();
+//			}
+//			try {
+//				Thread.sleep(1000);
+//			} catch(InterruptedException ex) {
+//				Thread.currentThread().interrupt();
+//			} 
+//		}
+//		System.out.println("connected");
+//	}
 }
